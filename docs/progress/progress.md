@@ -46,13 +46,13 @@
 | 里程碑 | 目标 | 对应周次 | 状态 |
 |--------|------|---------|------|
 | M0 | 研究纲领定稿（`claim.md`） | Week 1 | ✅ |
-| M1 | 基础架构：类型化超图数据结构 | Week 2 | ⬜ |
-| M2 | 图构建管线：对话 → 类型化超图 | Week 3 | ⬜ |
-| M3 | 检索模块：意图路由 + 层次遍历 | Week 4 | ⬜ |
-| M4 | 写入机制：冲突检测 + 时效性管理（RQ2） | Week 5 | ⬜ |
-| M5-a | LoCoMo 评测（HiMGA vs HyperMem vs MAGMA） | Week 6 | ⬜ |
-| M5-b | LongMemEval 评测（knowledge-update 子集） | Week 7 | ⬜ |
-| M6 | 消融实验：6 配置 × 2 数据集 + cross-type 专项 | Week 8 | ⬜ |
+| M1 | 基础架构：类型化超图数据结构 | Week 2 | ✅ 2026-05-21 |
+| M2 | 图构建管线：对话 → 类型化超图 | Week 3 | ✅ 2026-05-21（接口层完成，后端待接入）|
+| M3 | 检索模块：意图路由 + 层次遍历 | Week 4 | ✅ 2026-05-21（接口层完成，Embedding 后端待接入）|
+| M4 | 写入机制：冲突检测 + 时效性管理（RQ2） | Week 5 | ✅ 2026-05-21 |
+| M5-a | LoCoMo 评测（HiMGA vs HyperMem vs MAGMA） | Week 6 | ⬜ 评测脚本就绪，待数据集 + API 接入 |
+| M5-b | LongMemEval 评测（knowledge-update 子集） | Week 7 | ⬜ 评测脚本就绪，待数据集 + API 接入 |
+| M6 | 消融实验：6 配置 × 2 数据集 + cross-type 专项 | Week 8 | ⬜ 消融框架就绪，待 M5 数字 |
 | M7 | 论文整合定稿与提交 | Week 9–10 | ⬜ |
 
 ---
@@ -369,3 +369,78 @@
 | `disc/review_critique.md` | 3 位模拟审稿人 + Devil's Advocate 评议（7 项必修 + 8 项应改） |
 
 ---
+
+## Week 2（2026-05-21 ~ 2026-05-25）
+
+> 提前启动（今日 2026-05-21，比计划早一周）。
+
+**本周目标**：M1-M4 核心模块实现 + 论文骨架 + 评测框架
+
+### 已完成
+
+- ✅ **M1**：`TypedHypergraph` 核心数据结构（`src/hmrag/graph/`）
+  - `types.py`：NodeLayer / HyperedgeType / ConflictType 枚举
+  - `nodes.py`：TopicNode / EpisodeNode / FactNode 三层节点（含时效字段、置信度、历史追踪）
+  - `hyperedge.py`：TypedHyperedge（τ 类型映射 + ω 权重映射 + 时序有效性 + 规模约束）
+  - `typed_hypergraph.py`：主图类（实体索引、置信度管理、有效性过滤、统计接口）
+  - **核心特性验证**：类型独立性约束 ✅、跨层 Topic 锚点约束 ✅、因果超边 |e|≥3 约束 ✅
+
+- ✅ **M4**：冲突检测模块（`src/hmrag/graph/conflict.py`）
+  - 四类冲突分类（矛盾冲突 > 时序冲突 > 版本覆盖 > 正交并存）优先级修正
+  - 最小化修订原则：append-only history，不物理删除节点/边
+  - TemporalPruner：识别低置信度过期节点（周期性压缩准备）
+
+- ✅ **M2**：图构建管线（`src/hmrag/graph/builder.py`）
+  - DialogueSegmenter：对话三层切分（Episode 边界 → Topic 聚合 → Fact 抽取）
+  - 四类超边提取器（SemanticHyperedgeExtractor / TemporalHyperedgeExtractor / CausalHyperedgeExtractor / EntityHyperedgeExtractor）
+  - MemoryBuilder：双流架构（同步快路径 T_sem+T_temp < 500ms；异步慢路径 T_causal+冲突检测）
+  - LLMExtractor Protocol：依赖注入接口，支持 OpenAI / 本地 Qwen3 后端
+
+- ✅ **M3**：检索模块（`src/hmrag/retrieval/retriever.py`）
+  - TypeActivationWeights：r ∈ Δ^|T|，支持复合查询多类型同时激活
+  - LightweightIntentClassifier：规则路由（WHY/WHEN/WHO/WHERE/GENERAL/COMPOUND）+ LLM fallback
+  - TypedHypergraphRetriever：五步检索流水线（意图分析 → 类型门控 → 时序过滤 → 三层遍历 → 置信度加权）
+
+- ✅ **论文草稿**（`docs/paper/himga_paper.md`，6002 词）
+  - Abstract、§1 Introduction（骨架）、§2 Problem Formulation（完稿）
+  - §3.1-§3.4 方法章节（完稿，含形式化定义、Algorithm 1 伪代码、冲突分类表）
+  - §4.1 Experimental Setup（完稿）、§5 Related Work（完稿）、§6 Conclusion（完稿）
+  - §4.2-§4.5 占位符（待实验数字）
+
+- ✅ **评测框架**（`bench/`）
+  - `run_locomo.py`：LoCoMo 评测流水线（对齐 HyperMem 配置，含 bootstrap CI）
+  - `run_longmemeval.py`：LongMemEval 双模型评测（gpt-4o-mini + gpt-4o）
+  - `run_ablation.py`：六配置消融框架（注入点预留，待接 M2/M3 真实后端）
+
+- ✅ **测试套件**（`tests/test_typed_hypergraph.py`）
+  - 25/25 测试通过：超边约束、节点管理、跨层规则、类型独立性、冲突检测、置信度管理
+
+### 关键设计决策
+
+- **冲突分类优先级修正**：矛盾冲突（obj 不同）优先于时序冲突（时间窗口重叠）。原始优先级导致"同谓词不同宾语"（如 Beijing→Shanghai）被误分类为时序冲突。修正后逻辑更符合 claim.md §6 RQ2 语义。
+- **类型独立性实测**：同一组节点 (f1, f2) 同时持有 SEMANTIC 和 ENTITY 两条超边通过验证，支持 claim.md §7.1 形式约束 1。
+
+### 稿件进度更新
+
+| 章节 | 草稿完成 | 可提交完稿 |
+|------|---------|----------|
+| §2 Problem Formulation | ✅ 2026-05-21 | ✅ |
+| §3.1 Typed Hypergraph | ✅ 2026-05-21 | ✅ |
+| §3.2 Memory Construction | ✅ 2026-05-21 | ✅ |
+| §3.3 Intent-Driven Retrieval | ✅ 2026-05-21 | ✅ |
+| §3.4 Conflict-Aware Evolution | ✅ 2026-05-21 | ✅ |
+| §4.1 Experimental Setup | ✅ 2026-05-21 | ✅ |
+| §5 Related Work | ✅ 2026-05-21 | 需终稿审查 |
+| §1 Introduction | ✅ 骨架 2026-05-21 | ⬜ Week 9 终稿 |
+| §6 Conclusion | ✅ 2026-05-21 | ✅ |
+
+### 下周 (Week 3) 计划
+
+- 🔄 M2 终稿：为 LLM 抽取器接入真实后端（Qwen3-32B 本地 + GPT-4.1-mini API）
+- 🔄 M3 终稿：为检索模块接入 Qwen3-Embedding-4B 向量化后端
+- ⬜ §3.2 Memory Construction 代码与论文章节精确对齐验证
+- ⬜ 准备 LoCoMo 数据集下载（`bench/dataset/locomo/`）
+- ⬜ 准备 LongMemEval 数据集下载（`bench/dataset/longmemeval/`）
+
+---
+

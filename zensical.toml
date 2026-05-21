@@ -4,16 +4,17 @@ site_url = "https://colehank.github.io/hmrag/"
 repo_url = "https://github.com/colehank/hmrag"
 repo_name = "colehank/hmrag"
 
-nav = [
-  {"progress" = [
-    {"Claim" = "progress/claim.md"},
-    {"Progress" = "progress/progress.md"},
-  ]},
-  { "Home" = "index.md" },
-  { "Installation" = "installation.md" },
-  { "Usage" = "usage.md" },
-  { "API Reference" = "api.md" },
-]
+# nav = [
+#   {"progress" = [
+#     {"Claim" = "progress/claim.md"},
+#     {"Progress" = "progress/progress.md"},
+#     {"Paper" = "progress/paper.md"},
+#   ]},
+#   { "Home" = "index.md" },
+#   { "Installation" = "installation.md" },
+#   { "Usage" = "usage.md" },
+#   { "API Reference" = "api.md" },
+# ]
 
 [[project.theme.palette]]
 media = "(prefers-color-scheme: light)"
